@@ -60,6 +60,7 @@
   <script src="https://unpkg.com/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://unpkg.com/globe.gl@2.32.3/dist/globe.gl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.6.4/dist/tween.umd.js"></script>
 
   <script>
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
@@ -90,24 +91,28 @@
         .atmosphereAltitude(0.25)
         .pointsData(data);
 
+      // ✅ 1. 暂停 Globe.gl 的内部动画循环
+      globe.pauseAnimation();
+
+      // ✅ 2. 获取 Three.js 核心对象
       const renderer = globe.renderer();
       const camera = globe.camera();
       const scene = globe.scene();
 
-      // === 禁用默认 lookAt 限制 ===
+      // ✅ 3. 禁用 Globe.gl 默认控制器
       globe.controls().enabled = false;
 
-      // === 创建自定义 OrbitControls ===
+      // ✅ 4. 自定义 OrbitControls（完全自由）
       const controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
       controls.rotateSpeed = 0.7;
       controls.zoomSpeed = 0.8;
       controls.enablePan = false;
-      controls.minDistance = 150;
+      controls.minDistance = 200;
       controls.maxDistance = 1000;
-      controls.minPolarAngle = 0;         // 全角可旋转
-      controls.maxPolarAngle = Math.PI;   // 全角可旋转
+      controls.minPolarAngle = 0;
+      controls.maxPolarAngle = Math.PI;
       controls.enableZoom = true;
 
       camera.position.set(0, 0, 400);
@@ -115,9 +120,8 @@
       const infoPanel = document.getElementById('infoPanel');
       const backButton = document.getElementById('backButton');
       const cityBg = document.getElementById('cityBackground');
-      const initialView = { lat: 20, lng: 120, altitude: 2 };
 
-      // === 点击点位 ===
+      // ✅ 点击点位事件
       globe.onPointClick(point => {
         infoPanel.style.display = "block";
         backButton.style.display = "block";
@@ -153,20 +157,21 @@
         }
       });
 
+      // ✅ 返回全局视角
       function resetToGlobal() {
         infoPanel.style.display = "none";
         backButton.style.display = "none";
         cityBg.style.opacity = 0;
-        camera.position.set(0, 0, 400);
+        new TWEEN.Tween(camera.position)
+          .to({ x: 0, y: 0, z: 400 }, 1500)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .start();
       }
 
       backButton.addEventListener('click', resetToGlobal);
       document.addEventListener('keydown', e => { if (e.key === 'Escape') resetToGlobal(); });
-      document.addEventListener('click', e => {
-        if (!infoPanel.contains(e.target) && e.target !== backButton) resetToGlobal();
-      });
 
-      // === 动画循环 ===
+      // ✅ 5. 自定义渲染循环
       function animate() {
         requestAnimationFrame(animate);
         controls.update();
@@ -177,6 +182,5 @@
     })
     .catch(err => console.error("❌ 载入 Excel 失败:", err));
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.6.4/dist/tween.umd.js"></script>
 </body>
 </html>
