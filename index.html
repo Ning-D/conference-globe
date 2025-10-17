@@ -5,7 +5,15 @@
   <title>Interactive Conference Globe 🌏</title>
   <style>
     html, body { margin: 0; overflow: hidden; background: black; }
-    #globeViz { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    #globeViz { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+    /* === 城市背景层 === */
+    #cityBackground {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-size: cover; background-position: center;
+      opacity: 0; transition: opacity 1.5s ease-in-out;
+      z-index: 0;  /* 在地球后面，可调换 */
+    }
 
     #infoPanel {
       position: absolute; top: 60px; right: 40px; width: 320px; padding: 15px;
@@ -13,6 +21,7 @@
       border-radius: 15px; backdrop-filter: blur(8px);
       font-family: 'Segoe UI', sans-serif;
       display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 10;
     }
     #infoPanel img, #infoPanel video { width: 100%; border-radius: 10px; margin-top: 10px; }
 
@@ -22,14 +31,19 @@
       background: rgba(255,255,255,0.15); color: white;
       font-size: 16px; cursor: pointer;
       backdrop-filter: blur(6px); display: none;
-      transition: background 0.3s;
+      transition: background 0.3s; z-index: 10;
     }
     #backButton:hover { background: rgba(255,255,255,0.35); }
   </style>
 </head>
 <body>
+  <!-- 背景层 -->
+  <div id="cityBackground"></div>
+
+  <!-- 地球 -->
   <div id="globeViz"></div>
 
+  <!-- 信息面板 -->
   <div id="infoPanel">
     <h2 id="title"></h2>
     <p id="desc"></p>
@@ -49,7 +63,6 @@
   <script>
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
 
-  // 可以为特定城市预定义背景图（例如 Tokyo, Paris 等）
   const cityBackgrounds = {
     "Tokyo": "https://upload.wikimedia.org/wikipedia/commons/1/12/Tokyo_Tower_and_around_Skyscrapers.jpg",
     "Paris": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg",
@@ -78,58 +91,57 @@
         .pointsData(data);
 
       const initialView = { lat: 20, lng: 120, altitude: 2 };
-      const defaultBackground = 'https://unpkg.com/three-globe/example/img/night-sky.png';
-
       globe.pointOfView(initialView);
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.5;
 
       const infoPanel = document.getElementById('infoPanel');
       const backButton = document.getElementById('backButton');
+      const cityBg = document.getElementById('cityBackground');
 
+      // === 点击点 ===
       globe.onPointClick(point => {
         infoPanel.style.display = "block";
         backButton.style.display = "block";
+        globe.controls().autoRotate = false;
 
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
         document.getElementById("photo").src = point.photo || "";
         document.getElementById("video").src = point.video || "";
 
-        globe.controls().autoRotate = false;
-
-        // === 飞到该点上空 ===
+        // === 动画飞行 ===
         globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
 
-        // === 背景切换为城市图像 ===
+        // === 匹配城市 ===
         const matchedCity = Object.keys(cityBackgrounds).find(city =>
           (point.name || "").toLowerCase().includes(city.toLowerCase())
         );
         if (matchedCity) {
-          globe.backgroundImageUrl(cityBackgrounds[matchedCity]);
+          setTimeout(() => {
+            cityBg.style.backgroundImage = `url(${cityBackgrounds[matchedCity]})`;
+            cityBg.style.opacity = 1;  // ⬆️ 淡入城市背景
+          }, 2200);
         }
 
-        // === 下潜近地视角 ===
+        // 下潜近地
         setTimeout(() => {
-          globe.pointOfView(
-            { lat: point.lat + 0.5, lng: point.lng + 0.8, altitude: 0.35 },
-            2500
-          );
+          globe.pointOfView({ lat: point.lat + 0.5, lng: point.lng + 0.8, altitude: 0.35 }, 2500);
         }, 2200);
       });
 
-      // === 返回全球视角 ===
+      // === 返回 ===
       function resetToGlobal() {
         infoPanel.style.display = "none";
         backButton.style.display = "none";
-        globe.backgroundImageUrl(defaultBackground);
+        cityBg.style.opacity = 0; // 淡出城市背景
         globe.pointOfView(initialView, 2000);
         globe.controls().autoRotate = true;
       }
 
       backButton.addEventListener('click', resetToGlobal);
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') resetToGlobal(); });
-      document.addEventListener('click', (e) => {
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') resetToGlobal(); });
+      document.addEventListener('click', e => {
         if (!infoPanel.contains(e.target) && e.target !== backButton) resetToGlobal();
       });
     })
