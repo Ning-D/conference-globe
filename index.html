@@ -14,9 +14,7 @@
       font-family: 'Segoe UI', sans-serif;
       display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
-    #infoPanel img, #infoPanel video {
-      width: 100%; border-radius: 10px; margin-top: 10px;
-    }
+    #infoPanel img, #infoPanel video { width: 100%; border-radius: 10px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -36,7 +34,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-  // ✅ Excel 文件（GitHub Raw 版本）
+  // ✅ Raw 版本地址 (正确可下载)
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
 
   fetch(xlsxUrl)
@@ -47,11 +45,11 @@
       const worksheet = workbook.Sheets[sheetName];
       const data = XLSX.utils.sheet_to_json(worksheet);
 
-      // === 🌏 构建地球 ===
+      // === 构建地球 ===
       const globe = Globe()
         (document.getElementById('globeViz'))
-        .globeImageUrl('https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74456/world.topo.bathy.200412.3x5400x2700.jpg')
-        .backgroundImageUrl('https://cdn.jsdelivr.net/gh/vasturiano/three-globe/example/img/night-sky.png')
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
         .pointAltitude(0.03)
         .pointColor(() => 'rgba(255,180,80,0.9)')
         .pointRadius(0.6)
@@ -60,51 +58,10 @@
         .atmosphereAltitude(0.2)
         .pointsData(data);
 
-      // 💡 === 加上光照 ===
-      const scene = globe.scene();
-      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);  // 全局柔光
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // 模拟阳光
-      directionalLight.position.set(5, 3, 5);
-      scene.add(directionalLight);
-
-
-      // 初始视角
       globe.pointOfView({ lat: 20, lng: 120, altitude: 2 });
 
-      // === 🪩 点击点：飞行到城市内部视角 ===
       globe.onPointClick(point => {
-        const camera = globe.camera();
-        const currentPOV = globe.pointOfView();
-
-        // === 1️⃣ 拉远地球（准备飞行）
-        globe.pointOfView({ lat: currentPOV.lat, lng: currentPOV.lng, altitude: 6 }, 1000);
-
-        // === 2️⃣ 飞到目标城市上空
-        setTimeout(() => {
-          globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.8 }, 1800);
-        }, 1000);
-
-        // === 3️⃣ 深入城市近地视角
-        setTimeout(() => {
-          globe.showAtmosphere(false); // 可选：隐藏大气层以获得更清晰视野
-          const targetPOV = { lat: point.lat, lng: point.lng, altitude: 0.25 };
-          globe.pointOfView(targetPOV, 2500);
-
-          // 添加轻微仰视角，模拟“进入城市”
-          setTimeout(() => {
-            camera.rotation.x = 0.35; // 调整仰角
-            camera.rotation.y = 0.0;
-            camera.rotation.z = 0.0;
-          }, 2400);
-        }, 2800);
-
-        // === 🌟 点击点闪烁动画
-        globe.pointRadius(p => p === point ? 1.2 : 0.6);
-        setTimeout(() => globe.pointRadius(() => 0.6), 1200);
-
-        // === 📋 更新右侧信息面板
+        globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
         const panel = document.getElementById("infoPanel");
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
@@ -113,15 +70,12 @@
         panel.style.display = "block";
       });
 
-      // === 🌐 地球缓慢自转 ===
       globe.controls().autoRotate = true;
-      globe.controls().autoRotateSpeed = 0.4;
-
-      // === 🌫️ 可选：地面雾感增强深度效果 ===
-      // const scene = globe.scene();
-      // scene.fog = new THREE.FogExp2(0x000000, 0.15);
+      globe.controls().autoRotateSpeed = 0.5;
     })
     .catch(err => console.error("❌ 载入 Excel 失败:", err));
   </script>
 </body>
 </html>
+
+怎么加入飞入特效？
