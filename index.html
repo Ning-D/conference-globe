@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Interactive Conference Globe 🌏</title>
   <style>
     html, body { margin: 0; overflow: hidden; background: black; }
-    #globeViz { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-    /* === 城市背景层 === */
+    #globeViz {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      transition: opacity 1.5s ease-in-out;
+    }
+
+    /* ✅ 背景放在地球后面，并允许鼠标穿透 */
     #cityBackground {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
       background-size: cover; background-position: center;
       opacity: 0; transition: opacity 1.5s ease-in-out;
       z-index: 0;
+      pointer-events: none; /* ✅ 允许交互穿透到地球 */
     }
 
     #infoPanel {
@@ -37,13 +45,9 @@
   </style>
 </head>
 <body>
-  <!-- 背景层 -->
   <div id="cityBackground"></div>
-
-  <!-- 地球 -->
   <div id="globeViz"></div>
 
-  <!-- 信息面板 -->
   <div id="infoPanel">
     <h2 id="title"></h2>
     <p id="desc"></p>
@@ -53,16 +57,12 @@
 
   <button id="backButton">🌍 返回全球视角</button>
 
-  <!-- Three.js & Globe.gl -->
   <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
   <script src="https://unpkg.com/globe.gl@2.32.3/dist/globe.gl.min.js"></script>
-
-  <!-- SheetJS for Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
-
   const cityBackgrounds = {
     "Tokyo": "https://upload.wikimedia.org/wikipedia/commons/1/12/Tokyo_Tower_and_around_Skyscrapers.jpg",
     "Paris": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg",
@@ -95,30 +95,23 @@
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.5;
 
-      // ✅ 关键修复：允许用户交互（旋转、缩放）
-      globe.controls().enabled = true;
-
       const infoPanel = document.getElementById('infoPanel');
       const backButton = document.getElementById('backButton');
       const cityBg = document.getElementById('cityBackground');
+      const controls = globe.controls();
 
-      // === 点击点 ===
       globe.onPointClick(point => {
         infoPanel.style.display = "block";
         backButton.style.display = "block";
-        const controls = globe.controls();
         controls.autoRotate = false;
-        controls.enabled = false;  // 🔒 暂时禁用交互
 
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
         document.getElementById("photo").src = point.photo || "";
         document.getElementById("video").src = point.video || "";
 
-        // 第一段飞行
         globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
 
-        // 匹配城市背景
         const matchedCity = Object.keys(cityBackgrounds).find(city =>
           (point.name || "").toLowerCase().includes(city.toLowerCase())
         );
@@ -129,26 +122,16 @@
           }, 2200);
         }
 
-        // 第二段近地飞行
         setTimeout(() => {
           globe.pointOfView({ lat: point.lat + 0.5, lng: point.lng + 0.8, altitude: 0.35 }, 2500);
         }, 2200);
-
-        // ✅ 飞行结束后恢复交互
-        setTimeout(() => {
-          controls.enabled = true;   // 可拖动
-          controls.autoRotate = false;
-        }, 5000);
       });
 
-      // === 返回全球视角 ===
       function resetToGlobal() {
         infoPanel.style.display = "none";
         backButton.style.display = "none";
         cityBg.style.opacity = 0;
         globe.pointOfView(initialView, 2000);
-        const controls = globe.controls();
-        controls.enabled = true;
         controls.autoRotate = true;
       }
 
