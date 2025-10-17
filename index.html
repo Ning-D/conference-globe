@@ -95,6 +95,9 @@
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.5;
 
+      // ✅ 关键修复：允许用户交互（旋转、缩放）
+      globe.controls().enabled = true;
+
       const infoPanel = document.getElementById('infoPanel');
       const backButton = document.getElementById('backButton');
       const cityBg = document.getElementById('cityBackground');
