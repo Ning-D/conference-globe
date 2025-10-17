@@ -12,7 +12,7 @@
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background-size: cover; background-position: center;
       opacity: 0; transition: opacity 1.5s ease-in-out;
-      z-index: 0;  /* 在地球后面，可调换 */
+      z-index: 0;
     }
 
     #infoPanel {
@@ -103,40 +103,50 @@
       globe.onPointClick(point => {
         infoPanel.style.display = "block";
         backButton.style.display = "block";
-        globe.controls().autoRotate = false;
+        const controls = globe.controls();
+        controls.autoRotate = false;
+        controls.enabled = false;  // 🔒 暂时禁用交互
 
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
         document.getElementById("photo").src = point.photo || "";
         document.getElementById("video").src = point.video || "";
 
-        // === 动画飞行 ===
+        // 第一段飞行
         globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
 
-        // === 匹配城市 ===
+        // 匹配城市背景
         const matchedCity = Object.keys(cityBackgrounds).find(city =>
           (point.name || "").toLowerCase().includes(city.toLowerCase())
         );
         if (matchedCity) {
           setTimeout(() => {
             cityBg.style.backgroundImage = `url(${cityBackgrounds[matchedCity]})`;
-            cityBg.style.opacity = 1;  // ⬆️ 淡入城市背景
+            cityBg.style.opacity = 1;
           }, 2200);
         }
 
-        // 下潜近地
+        // 第二段近地飞行
         setTimeout(() => {
           globe.pointOfView({ lat: point.lat + 0.5, lng: point.lng + 0.8, altitude: 0.35 }, 2500);
         }, 2200);
+
+        // ✅ 飞行结束后恢复交互
+        setTimeout(() => {
+          controls.enabled = true;   // 可拖动
+          controls.autoRotate = false;
+        }, 5000);
       });
 
-      // === 返回 ===
+      // === 返回全球视角 ===
       function resetToGlobal() {
         infoPanel.style.display = "none";
         backButton.style.display = "none";
-        cityBg.style.opacity = 0; // 淡出城市背景
+        cityBg.style.opacity = 0;
         globe.pointOfView(initialView, 2000);
-        globe.controls().autoRotate = true;
+        const controls = globe.controls();
+        controls.enabled = true;
+        controls.autoRotate = true;
       }
 
       backButton.addEventListener('click', resetToGlobal);
