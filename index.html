@@ -50,6 +50,7 @@
 
   <button id="backButton">🌍 返回全球视角</button>
 
+  <!-- === 依赖库 === -->
   <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
   <script src="https://unpkg.com/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://unpkg.com/globe.gl@2.32.3/dist/globe.gl.min.js"></script>
@@ -58,6 +59,7 @@
 
   <script>
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
+
   const cityBackgrounds = {
     "Tokyo": "https://upload.wikimedia.org/wikipedia/commons/1/12/Tokyo_Tower_and_around_Skyscrapers.jpg",
     "Paris": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg",
@@ -85,18 +87,20 @@
         .atmosphereAltitude(0.25)
         .pointsData(data);
 
-      // 🌟 必须先让地球初始化一次（否则材质黑屏）
+      // 🌍 初始化视角（渲染一帧确保贴图加载）
       globe.pointOfView({ lat: 0, lng: 0, altitude: 2 });
-      // 等一帧再暂停动画
+
       setTimeout(() => {
-        globe.pauseAnimation();
+        globe.pauseAnimation(); // 停止内部自动控制
 
         const renderer = globe.renderer();
         const camera = globe.camera();
         const scene = globe.scene();
 
-        globe.controls().enabled = false; // 禁用默认控制
+        // 禁用默认控制器
+        globe.controls().enabled = false;
 
+        // === 自定义 OrbitControls ===
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
@@ -113,7 +117,7 @@
         const backButton = document.getElementById('backButton');
         const cityBg = document.getElementById('cityBackground');
 
-        // === 点击点事件 ===
+        // === 点击城市点 ===
         globe.onPointClick(point => {
           infoPanel.style.display = "block";
           backButton.style.display = "block";
@@ -123,6 +127,7 @@
           document.getElementById("photo").src = point.photo || "";
           document.getElementById("video").src = point.video || "";
 
+          // === 计算飞行目标 ===
           const phi = (90 - point.lat) * Math.PI / 180;
           const theta = (point.lng + 180) * Math.PI / 180;
           const r = 400;
@@ -148,6 +153,7 @@
           }
         });
 
+        // === 返回全球视角 ===
         function resetToGlobal() {
           infoPanel.style.display = "none";
           backButton.style.display = "none";
@@ -161,14 +167,36 @@
         backButton.addEventListener('click', resetToGlobal);
         document.addEventListener('keydown', e => { if (e.key === 'Escape') resetToGlobal(); });
 
+        const globeContainer = document.getElementById('globeViz');
+
         // === 渲染循环 ===
         function animate() {
           requestAnimationFrame(animate);
           controls.update();
           TWEEN.update();
+
+          // ✅ 保持自适应尺寸（否则会卡住）
+          const width = globeContainer.clientWidth;
+          const height = globeContainer.clientHeight;
+          if (renderer.getSize(new THREE.Vector2()).x !== width) {
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+          }
+
           renderer.render(scene, camera);
         }
         animate();
+
+        // === 窗口尺寸变化时更新 ===
+        window.addEventListener('resize', () => {
+          const width = globeContainer.clientWidth;
+          const height = globeContainer.clientHeight;
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(width, height);
+        });
+
       }, 1000);
     })
     .catch(err => console.error("❌ Excel 加载失败:", err));
