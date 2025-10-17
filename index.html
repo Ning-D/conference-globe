@@ -14,7 +14,9 @@
       font-family: 'Segoe UI', sans-serif;
       display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
-    #infoPanel img, #infoPanel video { width: 100%; border-radius: 10px; margin-top: 10px; }
+    #infoPanel img, #infoPanel video {
+      width: 100%; border-radius: 10px; margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -61,55 +63,38 @@
       // 初始视角
       globe.pointOfView({ lat: 20, lng: 120, altitude: 2 });
 
-      // === 🖱️ 点击点飞行特效 ===
+      // === 🪩 点击点：飞行到城市内部视角 ===
       globe.onPointClick(point => {
-        const controls = globe.controls();
-        const currentPOV = globe.pointOfView(); // 当前视角
-        const targetPOV = { lat: point.lat, lng: point.lng, altitude: 1.5 }; // 目标城市上空
+        const camera = globe.camera();
+        const currentPOV = globe.pointOfView();
 
-        // === ✈️ 三阶段飞行动画 ===
-        // 1️⃣ 拉远地球
-        globe.pointOfView(
-          { lat: currentPOV.lat, lng: currentPOV.lng, altitude: 5 },
-          1200
-        );
+        // === 1️⃣ 拉远地球（准备飞行）
+        globe.pointOfView({ lat: currentPOV.lat, lng: currentPOV.lng, altitude: 6 }, 1000);
 
-        // 2️⃣ 环绕中点
+        // === 2️⃣ 飞到目标城市上空
         setTimeout(() => {
-          globe.pointOfView(
-            { lat: (currentPOV.lat + point.lat) / 2, lng: (currentPOV.lng + point.lng) / 2, altitude: 3 },
-            1000
-          );
-        }, 1200);
+          globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.8 }, 1800);
+        }, 1000);
 
-        // 3️⃣ 飞入目标城市
+        // === 3️⃣ 深入城市近地视角
         setTimeout(() => {
+          globe.showAtmosphere(false); // 可选：隐藏大气层以获得更清晰视野
+          const targetPOV = { lat: point.lat, lng: point.lng, altitude: 0.25 };
           globe.pointOfView(targetPOV, 2500);
-        }, 2200);
 
-        // === 🌟 点击点放大闪烁 ===
+          // 添加轻微仰视角，模拟“进入城市”
+          setTimeout(() => {
+            camera.rotation.x = 0.35; // 调整仰角
+            camera.rotation.y = 0.0;
+            camera.rotation.z = 0.0;
+          }, 2400);
+        }, 2800);
+
+        // === 🌟 点击点闪烁动画
         globe.pointRadius(p => p === point ? 1.2 : 0.6);
         setTimeout(() => globe.pointRadius(() => 0.6), 1200);
 
-        // === 🪩 动态飞行弧线 ===
-        const tempArc = [{
-          startLat: currentPOV.lat,
-          startLng: currentPOV.lng,
-          endLat: point.lat,
-          endLng: point.lng,
-          color: ['rgba(255,255,0,0.9)', 'rgba(255,0,0,0.9)']
-        }];
-        globe.arcsData(tempArc)
-          .arcColor('color')
-          .arcDashLength(0.4)
-          .arcDashGap(0.2)
-          .arcDashInitialGap(() => Math.random())
-          .arcDashAnimateTime(2500);
-
-        // 3秒后清除临时弧线
-        setTimeout(() => globe.arcsData([]), 3000);
-
-        // === 📋 更新右侧信息面板 ===
+        // === 📋 更新右侧信息面板
         const panel = document.getElementById("infoPanel");
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
@@ -121,6 +106,10 @@
       // === 🌐 地球缓慢自转 ===
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.4;
+
+      // === 🌫️ 可选：地面雾感增强深度效果 ===
+      const scene = globe.scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.15);
     })
     .catch(err => console.error("❌ 载入 Excel 失败:", err));
   </script>
