@@ -34,7 +34,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-  // ✅ Raw 版本地址 (正确可下载)
+  // ✅ Excel 文件 (Raw 地址)
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
 
   fetch(xlsxUrl)
@@ -45,7 +45,7 @@
       const worksheet = workbook.Sheets[sheetName];
       const data = XLSX.utils.sheet_to_json(worksheet);
 
-      // === 构建地球 ===
+      // === 🌏 创建地球 ===
       const globe = Globe()
         (document.getElementById('globeViz'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -58,10 +58,37 @@
         .atmosphereAltitude(0.2)
         .pointsData(data);
 
+      // 初始视角
       globe.pointOfView({ lat: 20, lng: 120, altitude: 2 });
 
+      // === ✈️ 从名古屋出发的弧线 ===
+      const startLat = 35.1815; // Nagoya
+      const startLng = 136.9066;
+      const arcsData = data.map(d => ({
+        startLat, startLng,
+        endLat: d.lat,
+        endLng: d.lng,
+        color: ['rgba(255,255,0,0.8)', 'rgba(255,0,0,0.8)']
+      }));
+      globe
+        .arcsData(arcsData)
+        .arcColor('color')
+        .arcDashLength(0.4)
+        .arcDashGap(0.2)
+        .arcDashInitialGap(() => Math.random())
+        .arcDashAnimateTime(4000);
+
+      // === 🖱️ 点击飞入特效 ===
       globe.onPointClick(point => {
-        globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
+        const distance = Math.random() * 0.3 + 1.2; // 随机缩放距离
+        globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: distance }, 2500);
+
+        // 闪烁放大效果
+        const oldRadius = globe.pointRadius();
+        globe.pointRadius(p => p === point ? 1.2 : 0.6);
+        setTimeout(() => globe.pointRadius(() => 0.6), 1000);
+
+        // 更新信息面板
         const panel = document.getElementById("infoPanel");
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
@@ -70,8 +97,16 @@
         panel.style.display = "block";
       });
 
+      // === 🌐 自动巡航飞行 ===
+      let i = 0;
+      setInterval(() => {
+        const p = data[i % data.length];
+        globe.pointOfView({ lat: p.lat, lng: p.lng, altitude: 2 }, 4000);
+        i++;
+      }, 8000);
+
       globe.controls().autoRotate = true;
-      globe.controls().autoRotateSpeed = 0.5;
+      globe.controls().autoRotateSpeed = 0.4;
     })
     .catch(err => console.error("❌ 载入 Excel 失败:", err));
   </script>
