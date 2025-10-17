@@ -34,7 +34,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-  // ✅ Excel 文件 (Raw 地址)
+  // ✅ Excel 文件（GitHub Raw 版本）
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
 
   fetch(xlsxUrl)
@@ -45,7 +45,7 @@
       const worksheet = workbook.Sheets[sheetName];
       const data = XLSX.utils.sheet_to_json(worksheet);
 
-      // === 🌏 创建地球 ===
+      // === 🌏 构建地球 ===
       const globe = Globe()
         (document.getElementById('globeViz'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -61,34 +61,55 @@
       // 初始视角
       globe.pointOfView({ lat: 20, lng: 120, altitude: 2 });
 
-      // === ✈️ 从名古屋出发的弧线 ===
-      const startLat = 35.1815; // Nagoya
-      const startLng = 136.9066;
-      const arcsData = data.map(d => ({
-        startLat, startLng,
-        endLat: d.lat,
-        endLng: d.lng,
-        color: ['rgba(255,255,0,0.8)', 'rgba(255,0,0,0.8)']
-      }));
-      globe
-        .arcsData(arcsData)
-        .arcColor('color')
-        .arcDashLength(0.4)
-        .arcDashGap(0.2)
-        .arcDashInitialGap(() => Math.random())
-        .arcDashAnimateTime(4000);
-
-      // === 🖱️ 点击飞入特效 ===
+      // === 🖱️ 点击点飞行特效 ===
       globe.onPointClick(point => {
-        const distance = Math.random() * 0.3 + 1.2; // 随机缩放距离
-        globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: distance }, 2500);
+        const controls = globe.controls();
+        const currentPOV = globe.pointOfView(); // 当前视角
+        const targetPOV = { lat: point.lat, lng: point.lng, altitude: 1.5 }; // 目标城市上空
 
-        // 闪烁放大效果
-        const oldRadius = globe.pointRadius();
+        // === ✈️ 三阶段飞行动画 ===
+        // 1️⃣ 拉远地球
+        globe.pointOfView(
+          { lat: currentPOV.lat, lng: currentPOV.lng, altitude: 5 },
+          1200
+        );
+
+        // 2️⃣ 环绕中点
+        setTimeout(() => {
+          globe.pointOfView(
+            { lat: (currentPOV.lat + point.lat) / 2, lng: (currentPOV.lng + point.lng) / 2, altitude: 3 },
+            1000
+          );
+        }, 1200);
+
+        // 3️⃣ 飞入目标城市
+        setTimeout(() => {
+          globe.pointOfView(targetPOV, 2500);
+        }, 2200);
+
+        // === 🌟 点击点放大闪烁 ===
         globe.pointRadius(p => p === point ? 1.2 : 0.6);
-        setTimeout(() => globe.pointRadius(() => 0.6), 1000);
+        setTimeout(() => globe.pointRadius(() => 0.6), 1200);
 
-        // 更新信息面板
+        // === 🪩 动态飞行弧线 ===
+        const tempArc = [{
+          startLat: currentPOV.lat,
+          startLng: currentPOV.lng,
+          endLat: point.lat,
+          endLng: point.lng,
+          color: ['rgba(255,255,0,0.9)', 'rgba(255,0,0,0.9)']
+        }];
+        globe.arcsData(tempArc)
+          .arcColor('color')
+          .arcDashLength(0.4)
+          .arcDashGap(0.2)
+          .arcDashInitialGap(() => Math.random())
+          .arcDashAnimateTime(2500);
+
+        // 3秒后清除临时弧线
+        setTimeout(() => globe.arcsData([]), 3000);
+
+        // === 📋 更新右侧信息面板 ===
         const panel = document.getElementById("infoPanel");
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
@@ -97,14 +118,7 @@
         panel.style.display = "block";
       });
 
-      // === 🌐 自动巡航飞行 ===
-      let i = 0;
-      setInterval(() => {
-        const p = data[i % data.length];
-        globe.pointOfView({ lat: p.lat, lng: p.lng, altitude: 2 }, 4000);
-        i++;
-      }, 8000);
-
+      // === 🌐 地球缓慢自转 ===
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.4;
     })
