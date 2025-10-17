@@ -29,17 +29,22 @@
   <!-- === 引入 Three.js & Globe.gl === -->
   <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
   <script src="https://unpkg.com/globe.gl@2.32.3/dist/globe.gl.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- ✅ 新增：引入 SheetJS 用于解析 Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-  const csvUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.csv';
+  const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx'; // ✅ 改成xlsx地址
 
-  // 读取 CSV 并渲染
-  fetch(csvUrl)
-    .then(res => res.text())
-    .then(text => {
-      const data = Papa.parse(text, { header: true }).data;
+  fetch(xlsxUrl)
+    .then(res => res.arrayBuffer())   // Excel 是二进制文件
+    .then(ab => {
+      const workbook = XLSX.read(ab, { type: 'array' });
+      const sheetName = workbook.SheetNames[0]; // 默认读取第一个 sheet
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet); // 直接转成 JSON 数组
 
+      // === 构建地球 ===
       const globe = Globe()
         (document.getElementById('globeViz'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
