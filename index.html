@@ -15,6 +15,16 @@
       display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
     #infoPanel img, #infoPanel video { width: 100%; border-radius: 10px; margin-top: 10px; }
+
+    #backButton {
+      position: absolute; bottom: 40px; right: 40px;
+      padding: 10px 20px; border: none; border-radius: 10px;
+      background: rgba(255,255,255,0.15); color: white;
+      font-size: 16px; cursor: pointer;
+      backdrop-filter: blur(6px); display: none;
+      transition: background 0.3s;
+    }
+    #backButton:hover { background: rgba(255,255,255,0.35); }
   </style>
 </head>
 <body>
@@ -27,6 +37,8 @@
     <video id="video" controls></video>
   </div>
 
+  <button id="backButton">🌍 返回全球视角</button>
+
   <!-- Three.js & Globe.gl -->
   <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
   <script src="https://unpkg.com/globe.gl@2.32.3/dist/globe.gl.min.js"></script>
@@ -36,6 +48,14 @@
 
   <script>
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
+
+  // 可以为特定城市预定义背景图（例如 Tokyo, Paris 等）
+  const cityBackgrounds = {
+    "Tokyo": "https://upload.wikimedia.org/wikipedia/commons/1/12/Tokyo_Tower_and_around_Skyscrapers.jpg",
+    "Paris": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg",
+    "New York": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Manhattan_skyline_from_Jersey_City_November_2014_panorama_3.jpg",
+    "Beijing": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Beijing_skyline.jpg"
+  };
 
   fetch(xlsxUrl)
     .then(res => res.arrayBuffer())
@@ -57,29 +77,39 @@
         .atmosphereAltitude(0.2)
         .pointsData(data);
 
-      // === 初始视角 ===
       const initialView = { lat: 20, lng: 120, altitude: 2 };
+      const defaultBackground = 'https://unpkg.com/three-globe/example/img/night-sky.png';
+
       globe.pointOfView(initialView);
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.5;
 
-      // === 点击点事件 ===
+      const infoPanel = document.getElementById('infoPanel');
+      const backButton = document.getElementById('backButton');
+
       globe.onPointClick(point => {
-        // 显示信息面板
-        const panel = document.getElementById("infoPanel");
+        infoPanel.style.display = "block";
+        backButton.style.display = "block";
+
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
         document.getElementById("photo").src = point.photo || "";
         document.getElementById("video").src = point.video || "";
-        panel.style.display = "block";
 
-        // 停止自动旋转
         globe.controls().autoRotate = false;
 
-        // 1️⃣ 飞到该点上空
+        // === 飞到该点上空 ===
         globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
 
-        // 2️⃣ 近地视角：轻微偏移并下潜
+        // === 背景切换为城市图像 ===
+        const matchedCity = Object.keys(cityBackgrounds).find(city =>
+          (point.name || "").toLowerCase().includes(city.toLowerCase())
+        );
+        if (matchedCity) {
+          globe.backgroundImageUrl(cityBackgrounds[matchedCity]);
+        }
+
+        // === 下潜近地视角 ===
         setTimeout(() => {
           globe.pointOfView(
             { lat: point.lat + 0.5, lng: point.lng + 0.8, altitude: 0.35 },
@@ -88,23 +118,19 @@
         }, 2200);
       });
 
-      // === 点击空白处或按 ESC 返回初始视角 ===
-      document.addEventListener('click', (event) => {
-        const panel = document.getElementById('infoPanel');
-        // 如果点击的不是面板自身
-        if (!panel.contains(event.target)) {
-          panel.style.display = "none";
-          globe.pointOfView(initialView, 2000);
-          globe.controls().autoRotate = true;
-        }
-      });
+      // === 返回全球视角 ===
+      function resetToGlobal() {
+        infoPanel.style.display = "none";
+        backButton.style.display = "none";
+        globe.backgroundImageUrl(defaultBackground);
+        globe.pointOfView(initialView, 2000);
+        globe.controls().autoRotate = true;
+      }
 
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          document.getElementById('infoPanel').style.display = "none";
-          globe.pointOfView(initialView, 2000);
-          globe.controls().autoRotate = true;
-        }
+      backButton.addEventListener('click', resetToGlobal);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') resetToGlobal(); });
+      document.addEventListener('click', (e) => {
+        if (!infoPanel.contains(e.target) && e.target !== backButton) resetToGlobal();
       });
     })
     .catch(err => console.error("❌ 载入 Excel 失败:", err));
