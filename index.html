@@ -19,6 +19,7 @@
 </head>
 <body>
   <div id="globeViz"></div>
+
   <div id="infoPanel">
     <h2 id="title"></h2>
     <p id="desc"></p>
@@ -34,7 +35,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-  // ✅ Raw 版本地址 (正确可下载)
   const xlsxUrl = 'https://raw.githubusercontent.com/Ning-D/conference-globe/main/conference_points.xlsx';
 
   fetch(xlsxUrl)
@@ -45,7 +45,6 @@
       const worksheet = workbook.Sheets[sheetName];
       const data = XLSX.utils.sheet_to_json(worksheet);
 
-      // === 构建地球 ===
       const globe = Globe()
         (document.getElementById('globeViz'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -58,24 +57,57 @@
         .atmosphereAltitude(0.2)
         .pointsData(data);
 
-      globe.pointOfView({ lat: 20, lng: 120, altitude: 2 });
+      // === 初始视角 ===
+      const initialView = { lat: 20, lng: 120, altitude: 2 };
+      globe.pointOfView(initialView);
+      globe.controls().autoRotate = true;
+      globe.controls().autoRotateSpeed = 0.5;
 
+      // === 点击点事件 ===
       globe.onPointClick(point => {
-        globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
+        // 显示信息面板
         const panel = document.getElementById("infoPanel");
         document.getElementById("title").innerText = point.name || "Unnamed";
         document.getElementById("desc").innerText = point.desc || "";
         document.getElementById("photo").src = point.photo || "";
         document.getElementById("video").src = point.video || "";
         panel.style.display = "block";
+
+        // 停止自动旋转
+        globe.controls().autoRotate = false;
+
+        // 1️⃣ 飞到该点上空
+        globe.pointOfView({ lat: point.lat, lng: point.lng, altitude: 1.5 }, 2000);
+
+        // 2️⃣ 近地视角：轻微偏移并下潜
+        setTimeout(() => {
+          globe.pointOfView(
+            { lat: point.lat + 0.5, lng: point.lng + 0.8, altitude: 0.35 },
+            2500
+          );
+        }, 2200);
       });
 
-      globe.controls().autoRotate = true;
-      globe.controls().autoRotateSpeed = 0.5;
+      // === 点击空白处或按 ESC 返回初始视角 ===
+      document.addEventListener('click', (event) => {
+        const panel = document.getElementById('infoPanel');
+        // 如果点击的不是面板自身
+        if (!panel.contains(event.target)) {
+          panel.style.display = "none";
+          globe.pointOfView(initialView, 2000);
+          globe.controls().autoRotate = true;
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          document.getElementById('infoPanel').style.display = "none";
+          globe.pointOfView(initialView, 2000);
+          globe.controls().autoRotate = true;
+        }
+      });
     })
     .catch(err => console.error("❌ 载入 Excel 失败:", err));
   </script>
 </body>
 </html>
-
-怎么加入飞入特效？
