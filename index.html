@@ -60,6 +60,16 @@
         .atmosphereAltitude(0.2)
         .pointsData(data);
 
+      // 💡 === 加上光照 ===
+      const scene = globe.scene();
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);  // 全局柔光
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // 模拟阳光
+      directionalLight.position.set(5, 3, 5);
+      scene.add(directionalLight);
+
+
       // 初始视角
       globe.pointOfView({ lat: 20, lng: 120, altitude: 2 });
 
